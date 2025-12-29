@@ -1,0 +1,8 @@
+RewriteEngine On
+
+RewriteCond %{REQUEST_URI} !^/public/
+RewriteRule ^(.*)$ /public/$1 [L]
+
+<IfModule mod_rewrite.c>
+    RewriteRule ^(config|src|storage|database|templates)/ - [F,L]
+</IfModule>
