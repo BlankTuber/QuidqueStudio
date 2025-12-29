@@ -35,7 +35,7 @@ class DashboardController extends Controller
             $unreadCount += $conv['unread_count'];
         }
         
-        return $this->render('admin/dashboard', [
+        return $this->renderAdmin('admin/dashboard', [
             'stats' => $stats,
             'recentProjects' => $recentProjects,
             'recentPosts' => $recentPosts,

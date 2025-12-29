@@ -109,6 +109,10 @@ $router->post('/admin/projects/{id}/blocks/{blockId}', [AdminProject::class, 'up
 $router->post('/admin/projects/{id}/blocks/{blockId}/delete', [AdminProject::class, 'deleteBlock'], ['admin', 'csrf']);
 $router->post('/admin/projects/{id}/blocks/reorder', [AdminProject::class, 'reorderBlocks'], ['admin', 'csrf']);
 
+// Admin: Project Gallery
+$router->post('/admin/projects/{id}/blocks/{blockId}/gallery', [AdminProject::class, 'addGalleryItems'], ['admin', 'csrf']);
+$router->post('/admin/projects/{id}/gallery/{itemId}/delete', [AdminProject::class, 'removeGalleryItem'], ['admin', 'csrf']);
+
 // Admin: Devlogs
 $router->get('/admin/projects/{id}/devlog', [AdminDevlog::class, 'index'], ['admin']);
 $router->get('/admin/projects/{id}/devlog/create', [AdminDevlog::class, 'create'], ['admin']);

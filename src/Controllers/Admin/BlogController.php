@@ -9,6 +9,8 @@ use Quidque\Models\BlogBlock;
 use Quidque\Models\BlogBlockType;
 use Quidque\Models\BlogCategory;
 use Quidque\Models\BlogTag;
+use Quidque\Models\Media;
+use Quidque\Models\Project;
 
 class BlogController extends Controller
 {
@@ -26,7 +28,7 @@ class BlogController extends Controller
             $posts = array_merge($drafts, $published);
         }
         
-        return $this->render('admin/blog/index', [
+        return $this->renderAdmin('admin/blog/index', [
             'posts' => $posts,
             'currentStatus' => $status,
         ]);
@@ -36,13 +38,12 @@ class BlogController extends Controller
     {
         $categories = BlogCategory::allOrdered();
         $tags = BlogTag::allOrdered();
-        $blockTypes = BlogBlockType::all('name', 'ASC');
         
-        return $this->render('admin/blog/form', [
+        return $this->renderAdmin('admin/blog/form', [
             'post' => null,
             'categories' => $categories,
             'tags' => $tags,
-            'blockTypes' => $blockTypes,
+            'blockTypes' => [],
             'selectedTags' => [],
             'blocks' => [],
         ]);
@@ -53,11 +54,11 @@ class BlogController extends Controller
         $data = $this->validatePost();
         
         if (isset($data['error'])) {
-            return $this->render('admin/blog/form', [
+            return $this->renderAdmin('admin/blog/form', [
                 'post' => null,
                 'categories' => BlogCategory::allOrdered(),
                 'tags' => BlogTag::allOrdered(),
-                'blockTypes' => BlogBlockType::all('name', 'ASC'),
+                'blockTypes' => [],
                 'selectedTags' => [],
                 'blocks' => [],
                 'error' => $data['error'],
@@ -92,14 +93,18 @@ class BlogController extends Controller
         $blockTypes = BlogBlockType::all('name', 'ASC');
         $selectedTags = array_column(BlogPost::getTags($post['id']), 'id');
         $blocks = BlogBlock::getForPost($post['id']);
+        $allMedia = Media::images();
+        $allProjects = Project::all('title', 'ASC');
         
-        return $this->render('admin/blog/form', [
+        return $this->renderAdmin('admin/blog/form', [
             'post' => $post,
             'categories' => $categories,
             'tags' => $tags,
             'blockTypes' => $blockTypes,
             'selectedTags' => $selectedTags,
             'blocks' => $blocks,
+            'allMedia' => $allMedia,
+            'allProjects' => $allProjects,
         ]);
     }
     
@@ -114,13 +119,15 @@ class BlogController extends Controller
         $data = $this->validatePost($post['id']);
         
         if (isset($data['error'])) {
-            return $this->render('admin/blog/form', [
+            return $this->renderAdmin('admin/blog/form', [
                 'post' => $post,
                 'categories' => BlogCategory::allOrdered(),
                 'tags' => BlogTag::allOrdered(),
                 'blockTypes' => BlogBlockType::all('name', 'ASC'),
                 'selectedTags' => array_column(BlogPost::getTags($post['id']), 'id'),
                 'blocks' => BlogBlock::getForPost($post['id']),
+                'allMedia' => Media::images(),
+                'allProjects' => Project::all('title', 'ASC'),
                 'error' => $data['error'],
             ]);
         }
@@ -132,6 +139,12 @@ class BlogController extends Controller
         ]);
         
         BlogPost::setTags($post['id'], $data['tags'] ?? []);
+        
+        // Update block data
+        $blocks = $this->request->post('blocks', []);
+        foreach ($blocks as $blockId => $blockData) {
+            BlogBlock::updateData((int) $blockId, $blockData);
+        }
         
         $this->redirect('/admin/blog/' . $post['id'] . '/edit?saved=1');
     }
@@ -201,19 +214,9 @@ class BlogController extends Controller
         );
         $sortOrder = ($maxOrder['max_order'] ?? -1) + 1;
         
-        $blockId = BlogBlock::createBlock($post['id'], $blockTypeId, [], $sortOrder);
+        BlogBlock::createBlock($post['id'], $blockTypeId, [], $sortOrder);
         
-        if ($this->request->isHtmx()) {
-            $blocks = BlogBlock::getForPost($post['id']);
-            $blockTypes = BlogBlockType::all('name', 'ASC');
-            return $this->render('admin/partials/blog-blocks', [
-                'blocks' => $blocks,
-                'blockTypes' => $blockTypes,
-                'post' => $post,
-            ]);
-        }
-        
-        return $this->json(['success' => true, 'id' => $blockId]);
+        $this->redirect('/admin/blog/' . $post['id'] . '/edit#blocks-section');
     }
     
     public function updateBlock(array $params): string
@@ -238,13 +241,10 @@ class BlogController extends Controller
             return $this->json(['error' => 'Block not found'], 404);
         }
         
+        $postId = $block['post_id'];
         BlogBlock::delete($block['id']);
         
-        if ($this->request->isHtmx()) {
-            return '';
-        }
-        
-        return $this->json(['success' => true]);
+        $this->redirect('/admin/blog/' . $postId . '/edit#blocks-section');
     }
     
     public function reorderBlocks(array $params): string

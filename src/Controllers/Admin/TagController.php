@@ -17,7 +17,7 @@ class TagController extends Controller
         $blogTags = BlogTag::allOrdered();
         $blogCategories = BlogCategory::allOrdered();
         
-        return $this->render('admin/tags/index', [
+        return $this->renderAdmin('admin/tags/index', [
             'tags' => $tags,
             'techStack' => $techStack,
             'blogTags' => $blogTags,
@@ -31,23 +31,21 @@ class TagController extends Controller
         $name = trim($this->request->post('name', ''));
         
         if (empty($name)) {
-            return $this->json(['error' => 'Name is required'], 400);
+            $this->redirect('/admin/tags?error=Name+is+required');
+            return '';
         }
         
         $slug = $this->slugify($name);
         
         if (Tag::findBySlug($slug)) {
-            return $this->json(['error' => 'Tag already exists'], 400);
+            $this->redirect('/admin/tags?error=Tag+already+exists');
+            return '';
         }
         
-        $id = Tag::create(['name' => $name, 'slug' => $slug]);
+        Tag::create(['name' => $name, 'slug' => $slug]);
         
-        if ($this->request->isHtmx()) {
-            $tags = Tag::allOrdered();
-            return $this->render('admin/partials/tag-list', ['tags' => $tags]);
-        }
-        
-        return $this->json(['success' => true, 'id' => $id]);
+        $this->redirect('/admin/tags?saved=1');
+        return '';
     }
     
     public function deleteTag(array $params): string
@@ -55,16 +53,14 @@ class TagController extends Controller
         $tag = Tag::find((int) $params['id']);
         
         if (!$tag) {
-            return $this->json(['error' => 'Tag not found'], 404);
+            $this->redirect('/admin/tags?error=Tag+not+found');
+            return '';
         }
         
         Tag::delete($tag['id']);
         
-        if ($this->request->isHtmx()) {
-            return '';
-        }
-        
-        return $this->json(['success' => true]);
+        $this->redirect('/admin/tags?deleted=1');
+        return '';
     }
     
     // Tech Stack
@@ -74,27 +70,25 @@ class TagController extends Controller
         $tier = (int) $this->request->post('tier', 1);
         
         if (empty($name)) {
-            return $this->json(['error' => 'Name is required'], 400);
+            $this->redirect('/admin/tags?error=Name+is+required');
+            return '';
         }
         
         $slug = $this->slugify($name);
         
         if (TechStack::findBySlug($slug)) {
-            return $this->json(['error' => 'Tech already exists'], 400);
+            $this->redirect('/admin/tags?error=Tech+already+exists');
+            return '';
         }
         
         if ($tier < 1 || $tier > 4) {
             $tier = 1;
         }
         
-        $id = TechStack::create(['name' => $name, 'slug' => $slug, 'tier' => $tier]);
+        TechStack::create(['name' => $name, 'slug' => $slug, 'tier' => $tier]);
         
-        if ($this->request->isHtmx()) {
-            $techStack = TechStack::allGroupedByTier();
-            return $this->render('admin/partials/tech-list', ['techStack' => $techStack]);
-        }
-        
-        return $this->json(['success' => true, 'id' => $id]);
+        $this->redirect('/admin/tags?saved=1');
+        return '';
     }
     
     public function deleteTech(array $params): string
@@ -102,16 +96,14 @@ class TagController extends Controller
         $tech = TechStack::find((int) $params['id']);
         
         if (!$tech) {
-            return $this->json(['error' => 'Tech not found'], 404);
+            $this->redirect('/admin/tags?error=Tech+not+found');
+            return '';
         }
         
         TechStack::delete($tech['id']);
         
-        if ($this->request->isHtmx()) {
-            return '';
-        }
-        
-        return $this->json(['success' => true]);
+        $this->redirect('/admin/tags?deleted=1');
+        return '';
     }
     
     // Blog Tags
@@ -120,17 +112,14 @@ class TagController extends Controller
         $name = trim($this->request->post('name', ''));
         
         if (empty($name)) {
-            return $this->json(['error' => 'Name is required'], 400);
+            $this->redirect('/admin/tags?error=Name+is+required');
+            return '';
         }
         
-        $id = BlogTag::findOrCreate($name);
+        BlogTag::findOrCreate($name);
         
-        if ($this->request->isHtmx()) {
-            $blogTags = BlogTag::allOrdered();
-            return $this->render('admin/partials/blog-tag-list', ['blogTags' => $blogTags]);
-        }
-        
-        return $this->json(['success' => true, 'id' => $id]);
+        $this->redirect('/admin/tags?saved=1');
+        return '';
     }
     
     public function deleteBlogTag(array $params): string
@@ -138,16 +127,14 @@ class TagController extends Controller
         $tag = BlogTag::find((int) $params['id']);
         
         if (!$tag) {
-            return $this->json(['error' => 'Tag not found'], 404);
+            $this->redirect('/admin/tags?error=Tag+not+found');
+            return '';
         }
         
         BlogTag::delete($tag['id']);
         
-        if ($this->request->isHtmx()) {
-            return '';
-        }
-        
-        return $this->json(['success' => true]);
+        $this->redirect('/admin/tags?deleted=1');
+        return '';
     }
     
     // Blog Categories
@@ -156,23 +143,21 @@ class TagController extends Controller
         $name = trim($this->request->post('name', ''));
         
         if (empty($name)) {
-            return $this->json(['error' => 'Name is required'], 400);
+            $this->redirect('/admin/tags?error=Name+is+required');
+            return '';
         }
         
         $slug = $this->slugify($name);
         
         if (BlogCategory::findBySlug($slug)) {
-            return $this->json(['error' => 'Category already exists'], 400);
+            $this->redirect('/admin/tags?error=Category+already+exists');
+            return '';
         }
         
-        $id = BlogCategory::create(['name' => $name, 'slug' => $slug]);
+        BlogCategory::create(['name' => $name, 'slug' => $slug]);
         
-        if ($this->request->isHtmx()) {
-            $blogCategories = BlogCategory::allOrdered();
-            return $this->render('admin/partials/category-list', ['blogCategories' => $blogCategories]);
-        }
-        
-        return $this->json(['success' => true, 'id' => $id]);
+        $this->redirect('/admin/tags?saved=1');
+        return '';
     }
     
     public function deleteCategory(array $params): string
@@ -180,16 +165,14 @@ class TagController extends Controller
         $category = BlogCategory::find((int) $params['id']);
         
         if (!$category) {
-            return $this->json(['error' => 'Category not found'], 404);
+            $this->redirect('/admin/tags?error=Category+not+found');
+            return '';
         }
         
         BlogCategory::delete($category['id']);
         
-        if ($this->request->isHtmx()) {
-            return '';
-        }
-        
-        return $this->json(['success' => true]);
+        $this->redirect('/admin/tags?deleted=1');
+        return '';
     }
     
     private function slugify(string $text): string

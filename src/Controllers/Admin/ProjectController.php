@@ -17,7 +17,7 @@ class ProjectController extends Controller
     {
         $projects = Project::getAllWithTags();
         
-        return $this->render('admin/projects/index', [
+        return $this->renderAdmin('admin/projects/index', [
             'projects' => $projects,
         ]);
     }
@@ -27,7 +27,7 @@ class ProjectController extends Controller
         $tags = Tag::allOrdered();
         $techStack = TechStack::allGroupedByTier();
         
-        return $this->render('admin/projects/form', [
+        return $this->renderAdmin('admin/projects/form', [
             'project' => null,
             'tags' => $tags,
             'techStack' => $techStack,
@@ -41,7 +41,7 @@ class ProjectController extends Controller
         $data = $this->validateProject();
         
         if (isset($data['error'])) {
-            return $this->render('admin/projects/form', [
+            return $this->renderAdmin('admin/projects/form', [
                 'project' => null,
                 'tags' => Tag::allOrdered(),
                 'techStack' => TechStack::allGroupedByTier(),
@@ -85,8 +85,9 @@ class ProjectController extends Controller
         $selectedTech = array_column(Project::getTechStack($project['id']), 'id');
         $blocks = ProjectBlock::getForProject($project['id']);
         $blockTypes = BlockType::all('name', 'ASC');
+        $allMedia = Media::images(); // Get all images for the picker
         
-        return $this->render('admin/projects/form', [
+        return $this->renderAdmin('admin/projects/form', [
             'project' => $project,
             'tags' => $tags,
             'techStack' => $techStack,
@@ -94,6 +95,7 @@ class ProjectController extends Controller
             'selectedTech' => $selectedTech,
             'blocks' => $blocks,
             'blockTypes' => $blockTypes,
+            'allMedia' => $allMedia,
         ]);
     }
     
@@ -108,7 +110,7 @@ class ProjectController extends Controller
         $data = $this->validateProject($project['id']);
         
         if (isset($data['error'])) {
-            return $this->render('admin/projects/form', [
+            return $this->renderAdmin('admin/projects/form', [
                 'project' => $project,
                 'tags' => Tag::allOrdered(),
                 'techStack' => TechStack::allGroupedByTier(),
@@ -131,6 +133,12 @@ class ProjectController extends Controller
         
         Project::setTags($project['id'], $data['tags'] ?? []);
         Project::setTechStack($project['id'], $data['tech'] ?? []);
+        
+        // Update block data
+        $blocks = $this->request->post('blocks', []);
+        foreach ($blocks as $blockId => $blockData) {
+            ProjectBlock::updateData((int) $blockId, $blockData);
+        }
         
         $this->redirect('/admin/projects/' . $project['id'] . '/edit?saved=1');
     }
@@ -173,19 +181,9 @@ class ProjectController extends Controller
         );
         $sortOrder = ($maxOrder['max_order'] ?? -1) + 1;
         
-        $blockId = ProjectBlock::createBlock($project['id'], $blockTypeId, [], $sortOrder);
+        ProjectBlock::createBlock($project['id'], $blockTypeId, [], $sortOrder);
         
-        if ($this->request->isHtmx()) {
-            $blocks = ProjectBlock::getForProject($project['id']);
-            $blockTypes = BlockType::all('name', 'ASC');
-            return $this->render('admin/partials/project-blocks', [
-                'blocks' => $blocks,
-                'blockTypes' => $blockTypes,
-                'project' => $project,
-            ]);
-        }
-        
-        return $this->json(['success' => true, 'id' => $blockId]);
+        $this->redirect('/admin/projects/' . $project['id'] . '/edit#blocks-section');
     }
     
     public function updateBlock(array $params): string
@@ -210,14 +208,12 @@ class ProjectController extends Controller
             return $this->json(['error' => 'Block not found'], 404);
         }
         
+        $projectId = $block['project_id'];
+        
         GalleryItem::deleteForBlock($block['id']);
         ProjectBlock::delete($block['id']);
         
-        if ($this->request->isHtmx()) {
-            return '';
-        }
-        
-        return $this->json(['success' => true]);
+        $this->redirect('/admin/projects/' . $projectId . '/edit#blocks-section');
     }
     
     public function reorderBlocks(array $params): string
@@ -232,6 +228,46 @@ class ProjectController extends Controller
         ProjectBlock::reorder($project['id'], $order);
         
         return $this->json(['success' => true]);
+    }
+
+    public function addGalleryItems(array $params): string
+    {
+        $project = Project::find((int) $params['id']);
+        $block = ProjectBlock::find((int) $params['blockId']);
+        
+        if (!$project || !$block || $block['project_id'] !== $project['id']) {
+            return $this->json(['error' => 'Not found'], 404);
+        }
+        
+        $mediaIds = $this->request->post('media_ids', []);
+        
+        // Get current max sort order
+        $maxOrder = $this->db->fetch(
+            "SELECT MAX(sort_order) as max_order FROM gallery_items WHERE block_id = ?",
+            [$block['id']]
+        );
+        $sortOrder = ($maxOrder['max_order'] ?? -1) + 1;
+        
+        foreach ($mediaIds as $mediaId) {
+            GalleryItem::addToBlock($block['id'], (int) $mediaId, $sortOrder);
+            $sortOrder++;
+        }
+        
+        $this->redirect('/admin/projects/' . $project['id'] . '/edit#blocks-section');
+    }
+
+    public function removeGalleryItem(array $params): string
+    {
+        $project = Project::find((int) $params['id']);
+        $item = GalleryItem::find((int) $params['itemId']);
+        
+        if (!$project || !$item) {
+            return $this->json(['error' => 'Not found'], 404);
+        }
+        
+        GalleryItem::delete($item['id']);
+        
+        $this->redirect('/admin/projects/' . $project['id'] . '/edit#blocks-section');
     }
     
     private function validateProject(?int $excludeId = null): array

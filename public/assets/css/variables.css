@@ -1,0 +1,132 @@
+/* =============================================
+   QUIDQUE STUDIO — Design Tokens
+   ============================================= */
+
+:root {
+  /* === Colors: Light Mode === */
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-border: #e0e0e0;
+
+  /* === Accent Colors (Light Mode - toned down) === */
+  --color-cyan: #00b894;
+  --color-magenta: #d63384;
+  --color-cyan-muted: rgba(0, 184, 148, 0.15);
+  --color-magenta-muted: rgba(214, 51, 132, 0.15);
+
+  /* === Status Colors === */
+  --color-success: #00b894;
+  --color-error: #d63384;
+  --color-warning: #f39c12;
+
+  /* === Typography === */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* === Spacing === */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* === Layout === */
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 64px;
+  --content-max-width: 1200px;
+  --content-readable: 65ch;
+
+  /* === Borders === */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* === Shadows (light mode) === */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  /* === Transitions === */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* === Z-Index === */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+}
+
+/* === Dark Mode === */
+[data-theme="dark"] {
+  --color-bg: #0d0d0d;
+  --color-surface: #1a1a1a;
+  --color-surface-elevated: #242424;
+  --color-text: #e5e5e5;
+  --color-text-secondary: #999999;
+  --color-border: #333333;
+
+  /* Brighter accents for dark mode */
+  --color-cyan: #00ffbb;
+  --color-magenta: #ff00aa;
+  --color-cyan-muted: rgba(0, 255, 187, 0.13);
+  --color-magenta-muted: rgba(255, 0, 170, 0.13);
+
+  --color-success: #00ffbb;
+  --color-error: #ff00aa;
+  --color-warning: #ffaa00;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* === System preference fallback === */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #0d0d0d;
+    --color-surface: #1a1a1a;
+    --color-surface-elevated: #242424;
+    --color-text: #e5e5e5;
+    --color-text-secondary: #999999;
+    --color-border: #333333;
+
+    --color-cyan: #00ffbb;
+    --color-magenta: #ff00aa;
+    --color-cyan-muted: rgba(0, 255, 187, 0.13);
+    --color-magenta-muted: rgba(255, 0, 170, 0.13);
+
+    --color-success: #00ffbb;
+    --color-error: #ff00aa;
+    --color-warning: #ffaa00;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
+  }
+}
