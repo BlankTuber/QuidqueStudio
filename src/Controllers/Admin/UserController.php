@@ -14,7 +14,7 @@ class UserController extends Controller
     {
         $users = User::all('created_at', 'DESC');
         
-        return $this->render('admin/users/index', [
+        return $this->renderAdmin('admin/users/index', [
             'users' => $users,
         ]);
     }
@@ -30,7 +30,7 @@ class UserController extends Controller
         $sessions = Session::getUserSessions($user['id']);
         $comments = Comment::getRecentByUser($user['id'], 20);
         
-        return $this->render('admin/users/show', [
+        return $this->renderAdmin('admin/users/show', [
             'user' => $user,
             'sessions' => $sessions,
             'comments' => $comments,
@@ -42,16 +42,19 @@ class UserController extends Controller
         $user = User::find((int) $params['id']);
         
         if (!$user) {
-            return $this->json(['error' => 'User not found'], 404);
+            $this->redirect('/admin/users?error=User+not+found');
+            return '';
         }
         
         if ($user['id'] === Auth::id()) {
-            return $this->json(['error' => 'Cannot modify your own admin status'], 400);
+            $this->redirect('/admin/users/' . $user['id'] . '?error=Cannot+modify+your+own+admin+status');
+            return '';
         }
         
         User::update($user['id'], ['is_admin' => $user['is_admin'] ? 0 : 1]);
         
-        $this->redirect('/admin/users/' . $user['id']);
+        $this->redirect('/admin/users/' . $user['id'] . '?saved=1');
+        return '';
     }
     
     public function delete(array $params): string
@@ -59,21 +62,20 @@ class UserController extends Controller
         $user = User::find((int) $params['id']);
         
         if (!$user) {
-            return $this->json(['error' => 'User not found'], 404);
+            $this->redirect('/admin/users?error=User+not+found');
+            return '';
         }
         
         if ($user['id'] === Auth::id()) {
-            return $this->json(['error' => 'Cannot delete yourself'], 400);
+            $this->redirect('/admin/users/' . $user['id'] . '?error=Cannot+delete+yourself');
+            return '';
         }
         
         Session::destroyAllForUser($user['id']);
         User::delete($user['id']);
         
-        if ($this->request->isHtmx()) {
-            return '';
-        }
-        
         $this->redirect('/admin/users?deleted=1');
+        return '';
     }
     
     public function destroySession(array $params): string
@@ -81,11 +83,14 @@ class UserController extends Controller
         $session = Session::findValid($params['sessionId']);
         
         if (!$session) {
-            return $this->json(['error' => 'Session not found'], 404);
+            $this->redirect('/admin/users?error=Session+not+found');
+            return '';
         }
         
+        $userId = $session['user_id'];
         Session::destroy($params['sessionId']);
         
-        $this->redirect('/admin/users/' . $session['user_id']);
+        $this->redirect('/admin/users/' . $userId . '?saved=1');
+        return '';
     }
 }

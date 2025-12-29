@@ -66,7 +66,7 @@ class Router
     
     private function pathToPattern(string $path): string
     {
-        $pattern = preg_replace('/\{([a-z]+)\}/', '(?P<$1>[^/]+)', $path);
+        $pattern = preg_replace('/\{([a-zA-Z_]+)\}/', '(?P<$1>[^/]+)', $path);
         return '#^' . $pattern . '$#';
     }
     

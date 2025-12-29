@@ -12,7 +12,7 @@ class MessageController extends Controller
     {
         $conversations = Message::getAllConversations();
         
-        return $this->render('admin/messages/index', [
+        return $this->renderAdmin('admin/messages/index', [
             'conversations' => $conversations,
         ]);
     }
@@ -27,7 +27,7 @@ class MessageController extends Controller
         
         $messages = Message::getConversation($user['id']);
         
-        return $this->render('admin/messages/show', [
+        return $this->renderAdmin('admin/messages/show', [
             'user' => $user,
             'messages' => $messages,
         ]);
@@ -38,25 +38,20 @@ class MessageController extends Controller
         $user = User::find((int) $params['id']);
         
         if (!$user) {
-            return $this->json(['error' => 'User not found'], 404);
+            $this->redirect('/admin/messages?error=User+not+found');
+            return '';
         }
         
         $content = trim($this->request->post('content', ''));
         
         if (empty($content)) {
-            return $this->json(['error' => 'Message cannot be empty'], 400);
+            $this->redirect('/admin/messages/' . $user['id'] . '?error=Message+cannot+be+empty');
+            return '';
         }
         
         Message::sendFromAdmin($user['id'], $content);
         
-        if ($this->request->isHtmx()) {
-            $messages = Message::getConversation($user['id']);
-            return $this->render('admin/partials/message-thread', [
-                'messages' => $messages,
-                'user' => $user,
-            ]);
-        }
-        
         $this->redirect('/admin/messages/' . $user['id']);
+        return '';
     }
 }

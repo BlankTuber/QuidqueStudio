@@ -120,7 +120,39 @@ abstract class Controller
         require BASE_PATH . '/templates/layouts/admin.php';
         return ob_get_clean();
     }
+
+    protected function timeAgo(string $datetime): string
+    {
+        $time = strtotime($datetime);
+        $diff = time() - $time;
+        
+        if ($diff < 60) {
+            return 'Just now';
+        } elseif ($diff < 3600) {
+            $mins = floor($diff / 60);
+            return $mins . 'm ago';
+        } elseif ($diff < 86400) {
+            $hours = floor($diff / 3600);
+            return $hours . 'h ago';
+        } elseif ($diff < 604800) {
+            $days = floor($diff / 86400);
+            return $days . 'd ago';
+        } else {
+            return date('M j', $time);
+        }
+    }
     
+    protected function formatFileSize(int $bytes): string
+    {
+        if ($bytes < 1024) {
+            return $bytes . ' B';
+        } elseif ($bytes < 1024 * 1024) {
+            return round($bytes / 1024, 1) . ' KB';
+        } else {
+            return round($bytes / (1024 * 1024), 1) . ' MB';
+        }
+    }
+
     /**
      * Render without layout (for HTMX partials)
      */
