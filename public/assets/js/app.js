@@ -63,7 +63,6 @@
 
     if (!toggle || !app) return;
 
-    // Restore state
     const collapsed = localStorage.getItem(SIDEBAR_KEY) === 'true';
     if (collapsed) {
       app.classList.add('sidebar-collapsed');
@@ -88,7 +87,6 @@
         e.preventDefault();
         const dropdown = trigger.closest('.dropdown');
 
-        // Close other dropdowns
         document.querySelectorAll('.dropdown.open').forEach(d => {
           if (d !== dropdown) d.classList.remove('open');
         });
@@ -97,7 +95,6 @@
         return;
       }
 
-      // Close all dropdowns when clicking outside
       if (!e.target.closest('.dropdown')) {
         document.querySelectorAll('.dropdown.open').forEach(d => {
           d.classList.remove('open');
@@ -105,7 +102,6 @@
       }
     });
 
-    // Close on escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         document.querySelectorAll('.dropdown.open').forEach(d => {
@@ -135,7 +131,6 @@
   // ==========================================
 
   function initHtmx() {
-    // Add loading state to buttons during requests
     document.body.addEventListener('htmx:beforeRequest', (e) => {
       const trigger = e.detail.elt;
       if (trigger.tagName === 'BUTTON') {
@@ -154,24 +149,115 @@
       }
     });
 
-    // Re-init components after HTMX swap
     document.body.addEventListener('htmx:afterSwap', () => {
       initAlerts();
     });
   }
 
   // ==========================================
-  // Confirm Dialogs
+  // Confirm Modal
   // ==========================================
 
+  let confirmModal = null;
+  let confirmResolve = null;
+
+  function createConfirmModal() {
+    if (confirmModal) return;
+
+    const modalHTML = `
+      <div class="modal-overlay" id="confirm-modal">
+        <div class="modal modal-sm">
+          <div class="modal-header">
+            <h3 class="modal-title" id="confirm-modal-title">Confirm</h3>
+            <button type="button" class="modal-close" id="confirm-modal-close">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          <div class="modal-body">
+            <p id="confirm-modal-message">Are you sure?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="confirm-modal-cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirm-modal-confirm">Confirm</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    confirmModal = document.getElementById('confirm-modal');
+
+    document.getElementById('confirm-modal-close').addEventListener('click', () => closeConfirm(false));
+    document.getElementById('confirm-modal-cancel').addEventListener('click', () => closeConfirm(false));
+    document.getElementById('confirm-modal-confirm').addEventListener('click', () => closeConfirm(true));
+
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) {
+        closeConfirm(false);
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && confirmModal.classList.contains('open')) {
+        closeConfirm(false);
+      }
+    });
+  }
+
+  function showConfirm(message, title = 'Confirm') {
+    createConfirmModal();
+
+    document.getElementById('confirm-modal-title').textContent = title;
+    document.getElementById('confirm-modal-message').textContent = message;
+    confirmModal.classList.add('open');
+
+    document.getElementById('confirm-modal-confirm').focus();
+
+    return new Promise((resolve) => {
+      confirmResolve = resolve;
+    });
+  }
+
+  function closeConfirm(result) {
+    if (confirmModal) {
+      confirmModal.classList.remove('open');
+    }
+    if (confirmResolve) {
+      confirmResolve(result);
+      confirmResolve = null;
+    }
+  }
+
+  // Expose globally for inline scripts
+  window.showConfirm = showConfirm;
+
   function initConfirmDialogs() {
-    document.addEventListener('click', (e) => {
+    document.addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-confirm]');
       if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+
         const message = btn.dataset.confirm || 'Are you sure?';
-        if (!confirm(message)) {
-          e.preventDefault();
-          e.stopPropagation();
+        const title = btn.dataset.confirmTitle || 'Confirm';
+        const confirmed = await showConfirm(message, title);
+
+        if (confirmed) {
+          // Handle different element types
+          if (btn.tagName === 'A') {
+            window.location.href = btn.href;
+          } else if (btn.form) {
+            btn.form.submit();
+          } else if (btn.dataset.submitForm) {
+            const form = document.getElementById(btn.dataset.submitForm);
+            if (form) form.submit();
+          } else {
+            // Dispatch a custom event for other handlers
+            btn.dispatchEvent(new CustomEvent('confirmed', { bubbles: true }));
+          }
         }
       }
     });

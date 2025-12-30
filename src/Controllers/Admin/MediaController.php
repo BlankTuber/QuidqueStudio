@@ -89,6 +89,79 @@ class MediaController extends Controller
         return '';
     }
     
+    public function uploadAjax(array $params): string
+    {
+        if (empty($_FILES['file']['name'])) {
+            return $this->json(['error' => 'No file uploaded'], 400);
+        }
+        
+        $file = $_FILES['file'];
+        
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $errors = [
+                UPLOAD_ERR_INI_SIZE => 'File too large (server limit)',
+                UPLOAD_ERR_FORM_SIZE => 'File too large',
+                UPLOAD_ERR_PARTIAL => 'Upload incomplete',
+                UPLOAD_ERR_NO_FILE => 'No file uploaded',
+            ];
+            $error = $errors[$file['error']] ?? 'Upload failed';
+            return $this->json(['error' => $error], 400);
+        }
+        
+        $mimeType = mime_content_type($file['tmp_name']);
+        $fileType = $this->getFileType($mimeType);
+        
+        if (!$fileType) {
+            return $this->json(['error' => 'Invalid file type'], 400);
+        }
+        
+        if ($fileType !== 'image') {
+            return $this->json(['error' => 'Only images are allowed'], 400);
+        }
+        
+        // Check file size (10MB max)
+        $maxSize = 10 * 1024 * 1024;
+        if ($file['size'] > $maxSize) {
+            return $this->json(['error' => 'File too large (max 10MB)'], 400);
+        }
+        
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+        $path = 'media/' . date('Y/m/');
+        $fullPath = BASE_PATH . '/storage/uploads/' . $path;
+        
+        if (!is_dir($fullPath)) {
+            mkdir($fullPath, 0775, true);
+        }
+        
+        if (!move_uploaded_file($file['tmp_name'], $fullPath . $filename)) {
+            return $this->json(['error' => 'Failed to save file'], 500);
+        }
+        
+        $altText = trim($this->request->post('alt_text', ''));
+        
+        $mediaId = Media::upload(
+            $path . $filename,
+            $fileType,
+            $mimeType,
+            $file['size'],
+            Auth::id(),
+            $altText ?: null
+        );
+        
+        $media = Media::find($mediaId);
+        
+        return $this->json([
+            'success' => true,
+            'media' => [
+                'id' => $media['id'],
+                'file_path' => $media['file_path'],
+                'alt_text' => $media['alt_text'],
+                'url' => '/uploads/' . $media['file_path'],
+            ]
+        ]);
+    }
+    
     public function update(array $params): string
     {
         $media = Media::find((int) $params['id']);

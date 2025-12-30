@@ -261,6 +261,27 @@ class BlogController extends Controller
         return $this->json(['success' => true]);
     }
     
+    public function createTag(array $params): string
+    {
+        $name = trim($this->request->post('name', ''));
+        
+        if (empty($name)) {
+            return $this->json(['error' => 'Tag name is required'], 400);
+        }
+        
+        $tagId = BlogTag::findOrCreate($name);
+        $tag = BlogTag::find($tagId);
+        
+        return $this->json([
+            'success' => true,
+            'tag' => [
+                'id' => $tag['id'],
+                'name' => $tag['name'],
+                'slug' => $tag['slug'],
+            ]
+        ]);
+    }
+    
     private function validatePost(?int $excludeId = null): array
     {
         $title = trim($this->request->post('title', ''));

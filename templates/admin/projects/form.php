@@ -142,25 +142,59 @@ if ($isEdit && !empty($project['settings'])) {
                     <?php foreach ($blocks as $block): ?>
                         <?php
                         $blockData = json_decode($block['data'], true) ?? [];
+                        $blockPreview = '';
+                        
+                        switch ($block['block_type_slug']) {
+                            case 'link':
+                                $blockPreview = $blockData['label'] ?? $blockData['url'] ?? '';
+                                break;
+                            case 'download':
+                                $blockPreview = $blockData['label'] ?? $blockData['file_path'] ?? '';
+                                break;
+                            case 'audio':
+                            case 'video':
+                                $blockPreview = $blockData['label'] ?? $blockData['url'] ?? '';
+                                break;
+                            case 'embed':
+                                $blockPreview = $blockData['label'] ?? '[embed]';
+                                break;
+                            case 'gallery':
+                                $galleryCount = count(\Quidque\Models\GalleryItem::getForBlock($block['id']));
+                                $blockPreview = $galleryCount . ' image' . ($galleryCount !== 1 ? 's' : '');
+                                break;
+                        }
+                        $blockPreview = htmlspecialchars(mb_substr($blockPreview, 0, 60));
                         ?>
                         <div class="block-item" data-block-id="<?= $block['id'] ?>">
                             <div class="block-header">
-                                <span class="block-type">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="3" y1="12" x2="21" y2="12"/>
-                                        <line x1="3" y1="6" x2="21" y2="6"/>
-                                        <line x1="3" y1="18" x2="21" y2="18"/>
-                                    </svg>
-                                    <?= htmlspecialchars($block['block_type_name']) ?>
-                                </span>
-                                <button type="button" class="btn btn-ghost btn-sm delete-block-btn" 
-                                        data-block-id="<?= $block['id'] ?>"
-                                        data-confirm="Delete this block?">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <line x1="18" y1="6" x2="6" y2="18"/>
-                                        <line x1="6" y1="6" x2="18" y2="18"/>
-                                    </svg>
-                                </button>
+                                <div class="block-header-left">
+                                    <span class="block-type">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="3" y1="12" x2="21" y2="12"/>
+                                            <line x1="3" y1="6" x2="21" y2="6"/>
+                                            <line x1="3" y1="18" x2="21" y2="18"/>
+                                        </svg>
+                                        <?= htmlspecialchars($block['block_type_name']) ?>
+                                    </span>
+                                    <?php if ($blockPreview): ?>
+                                        <span class="block-preview"><?= $blockPreview ?></span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="block-header-right">
+                                    <button type="button" class="btn btn-ghost btn-sm delete-block-btn" 
+                                            data-block-id="<?= $block['id'] ?>"
+                                            data-confirm="Delete this block?">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </button>
+                                    <span class="block-toggle">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6,9 12,15 18,9"/>
+                                        </svg>
+                                    </span>
+                                </div>
                             </div>
                             <div class="block-content">
                                 <?php if ($block['block_type_slug'] === 'link'): ?>
@@ -225,9 +259,9 @@ if ($isEdit && !empty($project['settings'])) {
                                         <?php 
                                         $galleryItems = \Quidque\Models\GalleryItem::getForBlock($block['id']);
                                         ?>
-                                        <div class="gallery-items mb-4">
+                                        <div class="gallery-items mb-4" id="gallery-items-<?= $block['id'] ?>">
                                             <?php if (empty($galleryItems)): ?>
-                                                <p class="text-secondary text-small">No images yet.</p>
+                                                <p class="text-secondary text-small no-gallery-msg">No images yet.</p>
                                             <?php else: ?>
                                                 <div class="media-grid">
                                                     <?php foreach ($galleryItems as $item): ?>
@@ -245,10 +279,35 @@ if ($isEdit && !empty($project['settings'])) {
                                                 </div>
                                             <?php endif; ?>
                                         </div>
-                                        <button type="button" class="btn btn-secondary btn-sm open-media-picker"
-                                                data-block-id="<?= $block['id'] ?>">
-                                            Add Images from Media Library
-                                        </button>
+                                        
+                                        <div class="flex gap-3 flex-wrap">
+                                            <button type="button" class="btn btn-secondary btn-sm open-media-picker"
+                                                    data-block-id="<?= $block['id'] ?>">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                                    <polyline points="21,15 16,10 5,21"/>
+                                                </svg>
+                                                Select from Library
+                                            </button>
+                                            
+                                            <div class="inline-upload">
+                                                <input type="file" 
+                                                       class="gallery-upload-input" 
+                                                       data-block-id="<?= $block['id'] ?>"
+                                                       accept="image/*"
+                                                       multiple
+                                                       id="gallery-upload-<?= $block['id'] ?>">
+                                                <label for="gallery-upload-<?= $block['id'] ?>" class="btn btn-secondary btn-sm">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                                        <polyline points="17,8 12,3 7,8"/>
+                                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                                    </svg>
+                                                    Upload New
+                                                </label>
+                                            </div>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -286,32 +345,26 @@ if ($isEdit && !empty($project['settings'])) {
 </form>
 
 <?php if ($isEdit): ?>
-<!-- Separate forms for block actions (outside main form) -->
 <div id="block-action-forms" style="display: none;">
-    <!-- Add block form -->
     <form id="add-block-form" method="POST" action="/admin/projects/<?= $project['id'] ?>/blocks">
         <?= $csrf ?>
         <input type="hidden" name="block_type_id" id="add-block-type-id" value="">
     </form>
     
-    <!-- Delete block form -->
     <form id="delete-block-form" method="POST" action="">
         <?= $csrf ?>
     </form>
     
-    <!-- Add gallery item form -->
     <form id="add-gallery-item-form" method="POST" action="">
         <?= $csrf ?>
         <input type="hidden" name="media_id" id="gallery-media-id" value="">
     </form>
     
-    <!-- Remove gallery item form -->
     <form id="remove-gallery-item-form" method="POST" action="">
         <?= $csrf ?>
     </form>
 </div>
 
-<!-- Media Picker Modal -->
 <div id="media-picker-modal" class="modal" style="display: none;">
     <div class="modal-backdrop"></div>
     <div class="modal-content">
@@ -350,7 +403,7 @@ if ($isEdit && !empty($project['settings'])) {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const projectId = <?= $project['id'] ?>;
-    const csrfToken = '<?= $csrfToken ?>';
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
     
     // Add block
     document.querySelectorAll('.add-block-btn').forEach(btn => {
@@ -363,11 +416,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Delete block
     document.querySelectorAll('.delete-block-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
             const blockId = this.dataset.blockId;
-            const confirmMsg = this.dataset.confirm || 'Delete this block?';
+            const message = this.dataset.confirm || 'Delete this block?';
             
-            if (confirm(confirmMsg)) {
+            const confirmed = await window.showConfirm(message, 'Delete Block');
+            
+            if (confirmed) {
                 const form = document.getElementById('delete-block-form');
                 form.action = '/admin/projects/' + projectId + '/blocks/' + blockId + '/delete';
                 form.submit();
@@ -377,17 +433,42 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Remove gallery item
     document.querySelectorAll('.remove-gallery-item').forEach(btn => {
-        btn.addEventListener('click', function(e) {
+        btn.addEventListener('click', async function(e) {
             e.preventDefault();
+            e.stopPropagation();
             const itemId = this.dataset.itemId;
             
-            if (confirm('Remove this image from gallery?')) {
+            const confirmed = await window.showConfirm('Remove this image from gallery?', 'Remove Image');
+            
+            if (confirmed) {
                 const form = document.getElementById('remove-gallery-item-form');
                 form.action = '/admin/projects/' + projectId + '/gallery/' + itemId + '/delete';
                 form.submit();
             }
         });
     });
+    
+    // Block accordion
+    const blockList = document.getElementById('block-list');
+    if (blockList) {
+        const blocks = blockList.querySelectorAll('.block-item');
+        
+        blocks.forEach((block) => {
+            const header = block.querySelector('.block-header');
+            
+            header.addEventListener('click', function(e) {
+                if (e.target.closest('.delete-block-btn')) return;
+                
+                const isExpanded = block.classList.contains('expanded');
+                
+                blocks.forEach(b => b.classList.remove('expanded'));
+                
+                if (!isExpanded) {
+                    block.classList.add('expanded');
+                }
+            });
+        });
+    }
     
     // Media picker modal
     let currentBlockId = null;
@@ -404,7 +485,6 @@ document.addEventListener('DOMContentLoaded', function() {
         el.addEventListener('click', function() {
             modal.style.display = 'none';
             currentBlockId = null;
-            // Deselect all
             document.querySelectorAll('.media-item.selected').forEach(item => {
                 item.classList.remove('selected');
             });
@@ -419,22 +499,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Confirm selection
-    document.getElementById('confirm-media-selection')?.addEventListener('click', function() {
+    document.getElementById('confirm-media-selection')?.addEventListener('click', async function() {
         const selected = document.querySelectorAll('#media-picker-grid .media-item.selected');
         if (selected.length === 0) {
-            alert('Please select at least one image.');
+            await window.showConfirm('Please select at least one image.', 'No Selection');
             return;
         }
         
-        // Submit each selected media item
         const mediaIds = Array.from(selected).map(el => el.dataset.mediaId);
         
-        // For simplicity, we'll add them one at a time via form submissions
-        // In production, you'd want AJAX here
         const form = document.getElementById('add-gallery-item-form');
         form.action = '/admin/projects/' + projectId + '/blocks/' + currentBlockId + '/gallery';
         
-        // Add all media IDs as hidden inputs
         mediaIds.forEach(id => {
             const input = document.createElement('input');
             input.type = 'hidden';
@@ -444,6 +520,56 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         form.submit();
+    });
+    
+    // Inline gallery upload
+    document.querySelectorAll('.gallery-upload-input').forEach(input => {
+        input.addEventListener('change', async function() {
+            const blockId = this.dataset.blockId;
+            const files = this.files;
+            
+            if (!files.length) return;
+            
+            const label = this.nextElementSibling;
+            const originalHTML = label.innerHTML;
+            label.innerHTML = '<span class="loading"></span> Uploading...';
+            
+            let uploadedCount = 0;
+            
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('csrf_token', csrfToken);
+                
+                try {
+                    const response = await fetch('/admin/media/ajax', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success && data.media) {
+                        uploadedCount++;
+                    } else if (data.error) {
+                        console.error('Upload error:', data.error);
+                    }
+                } catch (err) {
+                    console.error('Upload failed:', err);
+                }
+            }
+            
+            label.innerHTML = originalHTML;
+            this.value = '';
+            
+            if (uploadedCount > 0) {
+                // Reload page to show new images (simplest solution)
+                // In production, you'd update the gallery via AJAX
+                window.location.reload();
+            } else {
+                await window.showConfirm('Upload failed. Please try again.', 'Error');
+            }
+        });
     });
 });
 </script>

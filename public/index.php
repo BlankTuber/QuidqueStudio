@@ -125,6 +125,7 @@ $router->post('/admin/projects/{id}/devlog/{entryId}/delete', [AdminDevlog::clas
 $router->get('/admin/blog', [AdminBlog::class, 'index'], ['admin']);
 $router->get('/admin/blog/create', [AdminBlog::class, 'create'], ['admin']);
 $router->post('/admin/blog', [AdminBlog::class, 'store'], ['admin', 'csrf']);
+$router->post('/admin/blog/tags', [AdminBlog::class, 'createTag'], ['admin', 'csrf']);
 $router->get('/admin/blog/{id}/edit', [AdminBlog::class, 'edit'], ['admin']);
 $router->post('/admin/blog/{id}', [AdminBlog::class, 'update'], ['admin', 'csrf']);
 $router->post('/admin/blog/{id}/publish', [AdminBlog::class, 'publish'], ['admin', 'csrf']);
@@ -161,6 +162,7 @@ $router->post('/admin/messages/{id}', [AdminMessage::class, 'reply'], ['admin', 
 // Admin: Media
 $router->get('/admin/media', [AdminMedia::class, 'index'], ['admin']);
 $router->post('/admin/media', [AdminMedia::class, 'upload'], ['admin', 'csrf']);
+$router->post('/admin/media/ajax', [AdminMedia::class, 'uploadAjax'], ['admin', 'csrf']);
 $router->post('/admin/media/{id}', [AdminMedia::class, 'update'], ['admin', 'csrf']);
 $router->post('/admin/media/{id}/delete', [AdminMedia::class, 'delete'], ['admin', 'csrf']);
 
