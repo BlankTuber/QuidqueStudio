@@ -14,6 +14,7 @@ $router->get('/projects/{slug}', [\Quidque\Controllers\ProjectController::class,
 
 // Blog
 $router->get('/blog', [\Quidque\Controllers\BlogController::class, 'index']);
+$router->get('/blog/search', [\Quidque\Controllers\BlogController::class, 'search']);
 $router->get('/blog/category/{slug}', [\Quidque\Controllers\BlogController::class, 'byCategory']);
 $router->get('/blog/tag/{slug}', [\Quidque\Controllers\BlogController::class, 'byTag']);
 $router->get('/blog/{slug}', [\Quidque\Controllers\BlogController::class, 'show']);
@@ -22,6 +23,12 @@ $router->get('/blog/{slug}', [\Quidque\Controllers\BlogController::class, 'show'
 $router->get('/devlog', [\Quidque\Controllers\DevlogController::class, 'feed']);
 $router->get('/projects/{slug}/devlog', [\Quidque\Controllers\DevlogController::class, 'index']);
 $router->get('/projects/{slug}/devlog/{entry}', [\Quidque\Controllers\DevlogController::class, 'show']);
+
+// RSS Feeds
+$router->get('/feed', [\Quidque\Controllers\FeedController::class, 'blog']);
+$router->get('/feed/blog', [\Quidque\Controllers\FeedController::class, 'blog']);
+$router->get('/feed/devlog', [\Quidque\Controllers\FeedController::class, 'devlog']);
+$router->get('/feed/projects/{slug}', [\Quidque\Controllers\FeedController::class, 'project']);
 
 // Auth (guests only)
 $router->get('/login', [\Quidque\Controllers\AuthController::class, 'loginForm'], ['guest']);

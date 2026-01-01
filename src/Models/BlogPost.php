@@ -29,9 +29,10 @@ class BlogPost extends Model
     
     public static function getDrafts(?int $authorId = null): array
     {
-        $sql = "SELECT bp.*, u.username as author_name
+        $sql = "SELECT bp.*, u.username as author_name, bc.name as category_name, bc.slug as category_slug
                 FROM " . static::$table . " bp
                 JOIN users u ON bp.author_id = u.id
+                LEFT JOIN blog_categories bc ON bp.category_id = bc.id
                 WHERE bp.status = ?";
         $params = [Constants::POST_DRAFT];
         
@@ -48,7 +49,7 @@ class BlogPost extends Model
     public static function getByCategory(string $categorySlug, int $limit = 10): array
     {
         return self::$db->fetchAll(
-            "SELECT bp.*, u.username as author_name
+            "SELECT bp.*, u.username as author_name, bc.name as category_name, bc.slug as category_slug
              FROM " . static::$table . " bp
              JOIN users u ON bp.author_id = u.id
              JOIN blog_categories bc ON bp.category_id = bc.id
@@ -62,9 +63,10 @@ class BlogPost extends Model
     public static function getByTag(string $tagSlug, int $limit = 10): array
     {
         return self::$db->fetchAll(
-            "SELECT bp.*, u.username as author_name
+            "SELECT bp.*, u.username as author_name, bc.name as category_name, bc.slug as category_slug
              FROM " . static::$table . " bp
              JOIN users u ON bp.author_id = u.id
+             LEFT JOIN blog_categories bc ON bp.category_id = bc.id
              JOIN blog_post_tags bpt ON bp.id = bpt.post_id
              JOIN blog_tags bt ON bpt.tag_id = bt.id
              WHERE bp.status = ? AND bt.slug = ?
@@ -138,13 +140,34 @@ class BlogPost extends Model
     {
         $searchTerm = '%' . $query . '%';
         return self::$db->fetchAll(
-            "SELECT bp.*, u.username as author_name
+            "SELECT bp.*, u.username as author_name, bc.name as category_name, bc.slug as category_slug
              FROM " . static::$table . " bp
              JOIN users u ON bp.author_id = u.id
+             LEFT JOIN blog_categories bc ON bp.category_id = bc.id
              WHERE bp.status = ? AND (bp.title LIKE ? OR bp.slug LIKE ?)
              ORDER BY bp.published_at DESC
              LIMIT ?",
             [Constants::POST_PUBLISHED, $searchTerm, $searchTerm, $limit]
         );
+    }
+    
+    public static function getExcerpt(int $postId, int $maxLength = 200): string
+    {
+        $blocks = BlogBlock::getForPost($postId);
+        
+        foreach ($blocks as $block) {
+            if ($block['block_type_slug'] === 'text') {
+                $data = json_decode($block['data'], true) ?? [];
+                if (!empty($data['content'])) {
+                    $text = strip_tags($data['content']);
+                    if (mb_strlen($text) > $maxLength) {
+                        return mb_substr($text, 0, $maxLength - 3) . '...';
+                    }
+                    return $text;
+                }
+            }
+        }
+        
+        return '';
     }
 }

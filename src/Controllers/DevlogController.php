@@ -4,6 +4,7 @@ namespace Quidque\Controllers;
 
 use Quidque\Models\Project;
 use Quidque\Models\Devlog;
+use Quidque\Helpers\Seo;
 
 class DevlogController extends Controller
 {
@@ -25,6 +26,7 @@ class DevlogController extends Controller
         return $this->render('devlog/index', [
             'project' => $project,
             'entries' => $entries,
+            'seo' => Seo::noIndex(),
         ]);
     }
     
@@ -45,6 +47,7 @@ class DevlogController extends Controller
         return $this->render('devlog/show', [
             'project' => $project,
             'entry' => $entry,
+            'seo' => Seo::noIndex(),
         ]);
     }
     
@@ -60,6 +63,7 @@ class DevlogController extends Controller
         
         return $this->render('devlog/feed', [
             'entries' => $entries,
+            'seo' => Seo::noIndex(),
         ]);
     }
 }

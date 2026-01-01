@@ -149,7 +149,7 @@ class Project extends Model
     {
         $searchTerm = '%' . $query . '%';
         return self::$db->fetchAll(
-            "SELECT p.*, GROUP_CONCAT(DISTINCT t.name) as tag_names
+            "SELECT p.*, GROUP_CONCAT(DISTINCT t.name) as tag_names, GROUP_CONCAT(DISTINCT t.slug) as tag_slugs
              FROM " . static::$table . " p
              LEFT JOIN project_tags pt ON p.id = pt.project_id
              LEFT JOIN tags t ON pt.tag_id = t.id
@@ -164,5 +164,16 @@ class Project extends Model
     public static function isValidStatus(string $status): bool
     {
         return in_array($status, Constants::PROJECT_STATUSES);
+    }
+    
+    public static function getCurrentlyWorkingOn(): ?array
+    {
+        $projects = self::$db->fetchAll(
+            "SELECT * FROM " . static::$table . " 
+             WHERE status = ? 
+             ORDER BY updated_at DESC LIMIT 1",
+            [Constants::PROJECT_ACTIVE]
+        );
+        return $projects[0] ?? null;
     }
 }

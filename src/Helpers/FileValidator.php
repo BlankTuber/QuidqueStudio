@@ -47,7 +47,7 @@ class FileValidator
         }
         
         if ($requireImage || str_starts_with($mimeType, 'image/')) {
-            if (!self::isValidImage($file['tmp_name'])) {
+            if (str_starts_with($mimeType, 'image/') && !self::isValidImage($file['tmp_name'])) {
                 return ['valid' => false, 'error' => 'Invalid or corrupted image'];
             }
         }
@@ -85,16 +85,29 @@ class FileValidator
             return false;
         }
         
-        $header = fread($handle, 12);
+        $header = fread($handle, 32);
         fclose($handle);
         
         foreach (Constants::FILE_SIGNATURES[$expectedMime] as $signature) {
             if (str_starts_with($header, $signature)) {
                 return true;
             }
-            
-            // WebP has signature at offset 8
-            if ($expectedMime === 'image/webp' && substr($header, 8, 4) === 'WEBP') {
+        }
+        
+        if ($expectedMime === 'image/webp' && strlen($header) >= 12) {
+            if (substr($header, 8, 4) === 'WEBP') {
+                return true;
+            }
+        }
+        
+        if ($expectedMime === 'audio/wav' && strlen($header) >= 12) {
+            if (str_starts_with($header, 'RIFF') && substr($header, 8, 4) === 'WAVE') {
+                return true;
+            }
+        }
+        
+        if ($expectedMime === 'video/mp4' && strlen($header) >= 8) {
+            if (strpos($header, 'ftyp') !== false) {
                 return true;
             }
         }
@@ -155,11 +168,11 @@ class FileValidator
             'image/png' => ['png'],
             'image/gif' => ['gif'],
             'image/webp' => ['webp'],
-            'video/mp4' => ['mp4'],
+            'video/mp4' => ['mp4', 'm4v'],
             'video/webm' => ['webm'],
             'audio/mpeg' => ['mp3'],
             'audio/wav' => ['wav'],
-            'audio/ogg' => ['ogg'],
+            'audio/ogg' => ['ogg', 'oga'],
         ];
         
         return $map[$mimeType] ?? [];
@@ -177,5 +190,21 @@ class FileValidator
             UPLOAD_ERR_EXTENSION => 'Upload blocked by server extension',
             default => 'Unknown upload error',
         };
+    }
+    
+    public static function getImageDimensions(string $path): ?array
+    {
+        $info = @getimagesize($path);
+        
+        if ($info === false) {
+            return null;
+        }
+        
+        return [
+            'width' => $info[0],
+            'height' => $info[1],
+            'type' => $info[2],
+            'mime' => $info['mime'],
+        ];
     }
 }

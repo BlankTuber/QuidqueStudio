@@ -6,6 +6,7 @@ use Quidque\Core\Database;
 use Quidque\Core\Request;
 use Quidque\Core\Auth;
 use Quidque\Core\Csrf;
+use Quidque\Helpers\Seo;
 
 abstract class Controller
 {
@@ -21,12 +22,8 @@ abstract class Controller
         $this->config = $config;
     }
     
-    /**
-     * Render a view with the app layout
-     */
-    protected function render(string $template, array $data = []): string
+    protected function getCommonData(array $data = []): array
     {
-        // Add global data
         $data['config'] = $this->config;
         $data['auth'] = [
             'check' => Auth::check(),
@@ -36,86 +33,73 @@ abstract class Controller
         $data['csrf'] = Csrf::field();
         $data['csrfToken'] = Csrf::token();
         
-        // Check for flash messages in query string
-        if ($this->request->get('saved')) {
-            $data['success'] = $data['success'] ?? 'Changes saved successfully.';
-        }
-        if ($this->request->get('created')) {
-            $data['success'] = $data['success'] ?? 'Created successfully.';
-        }
-        if ($this->request->get('deleted')) {
-            $data['success'] = $data['success'] ?? 'Deleted successfully.';
+        $flashMessages = [
+            'saved' => 'Changes saved successfully.',
+            'created' => 'Created successfully.',
+            'deleted' => 'Deleted successfully.',
+            'published' => 'Published successfully.',
+            'unpublished' => 'Unpublished successfully.',
+        ];
+        
+        foreach ($flashMessages as $key => $message) {
+            if ($this->request->get($key) && !isset($data['success'])) {
+                $data['success'] = $message;
+                break;
+            }
         }
         
-        // Extract data to local scope
+        $error = $this->request->get('error');
+        if ($error && !isset($data['error'])) {
+            $data['error'] = urldecode($error);
+        }
+        
+        if (!isset($data['seo'])) {
+            $data['seo'] = Seo::index();
+        }
+        
+        return $data;
+    }
+    
+    protected function render(string $template, array $data = []): string
+    {
+        $data = $this->getCommonData($data);
+        
         extract($data);
         
-        // Capture template content
         ob_start();
         require BASE_PATH . '/templates/' . $template . '.php';
         $content = ob_get_clean();
         
-        // If template sets $layout = false, return content directly (for partials/HTMX)
         if (isset($layout) && $layout === false) {
             return $content;
         }
         
-        // Default layout values
         $pageTitle = $pageTitle ?? 'Quidque Studio';
         $pageClass = $pageClass ?? '';
         $showSidebar = $showSidebar ?? true;
         $sidebarCollapsed = $sidebarCollapsed ?? true;
         $breadcrumbs = $breadcrumbs ?? [];
+        $seo = $seo ?? Seo::index();
         
-        // Render with layout
         ob_start();
         require BASE_PATH . '/templates/layouts/app.php';
         return ob_get_clean();
     }
 
-    /**
-     * Render a view with the admin layout
-     */
     protected function renderAdmin(string $template, array $data = []): string
     {
-        $data['config'] = $this->config;
-        $data['auth'] = [
-            'check' => Auth::check(),
-            'user' => Auth::user(),
-            'isAdmin' => Auth::isAdmin(),
-        ];
-        $data['csrf'] = Csrf::field();
-        $data['csrfToken'] = Csrf::token();
-        
-        // Check for flash messages
-        if ($this->request->get('saved')) {
-            $data['success'] = $data['success'] ?? 'Changes saved successfully.';
-        }
-        if ($this->request->get('created')) {
-            $data['success'] = $data['success'] ?? 'Created successfully.';
-        }
-        if ($this->request->get('deleted')) {
-            $data['success'] = $data['success'] ?? 'Deleted successfully.';
-        }
-        if ($this->request->get('published')) {
-            $data['success'] = $data['success'] ?? 'Published successfully.';
-        }
-        if ($this->request->get('unpublished')) {
-            $data['success'] = $data['success'] ?? 'Unpublished successfully.';
-        }
+        $data['seo'] = Seo::noIndex();
+        $data = $this->getCommonData($data);
         
         extract($data);
         
-        // Capture template content
         ob_start();
         require BASE_PATH . '/templates/' . $template . '.php';
         $content = ob_get_clean();
         
-        // Default layout values
         $pageTitle = $pageTitle ?? 'Admin';
         $breadcrumbs = $breadcrumbs ?? [];
         
-        // Render with admin layout
         ob_start();
         require BASE_PATH . '/templates/layouts/admin.php';
         return ob_get_clean();
@@ -153,19 +137,9 @@ abstract class Controller
         }
     }
 
-    /**
-     * Render without layout (for HTMX partials)
-     */
     protected function partial(string $template, array $data = []): string
     {
-        $data['config'] = $this->config;
-        $data['auth'] = [
-            'check' => Auth::check(),
-            'user' => Auth::user(),
-            'isAdmin' => Auth::isAdmin(),
-        ];
-        $data['csrf'] = Csrf::field();
-        $data['csrfToken'] = Csrf::token();
+        $data = $this->getCommonData($data);
         
         extract($data);
         
@@ -191,5 +165,28 @@ abstract class Controller
     {
         http_response_code(404);
         return $this->render('errors/404');
+    }
+    
+    protected function respond(string $redirectUrl, string $partial = '', array $partialData = []): string
+    {
+        if ($this->request->isHtmx() && $partial) {
+            return $this->partial($partial, $partialData);
+        }
+        
+        $this->redirect($redirectUrl);
+        return '';
+    }
+    
+    protected function error(string $message, int $status = 400, string $redirectUrl = ''): string
+    {
+        if ($this->request->isHtmx() || $this->request->isAjax()) {
+            return $this->json(['error' => $message], $status);
+        }
+        
+        if ($redirectUrl) {
+            $this->redirect($redirectUrl . '?error=' . urlencode($message));
+        }
+        
+        return $this->json(['error' => $message], $status);
     }
 }

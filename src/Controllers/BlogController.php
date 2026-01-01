@@ -7,6 +7,7 @@ use Quidque\Models\BlogBlock;
 use Quidque\Models\BlogCategory;
 use Quidque\Models\BlogTag;
 use Quidque\Models\Media;
+use Quidque\Helpers\Seo;
 use Quidque\Constants;
 
 class BlogController extends Controller
@@ -25,6 +26,7 @@ class BlogController extends Controller
             'posts' => $posts,
             'page' => $page,
             'totalPages' => $totalPages,
+            'seo' => Seo::index(),
         ]);
     }
     
@@ -48,11 +50,18 @@ class BlogController extends Controller
             }
         }
         
+        $seo = Seo::make()->setNoIndex();
+        $excerpt = BlogPost::getExcerpt($post['id']);
+        if ($excerpt) {
+            $seo->setDescription($excerpt);
+        }
+        
         return $this->render('blog/show', [
             'post' => $post,
             'blocks' => $blocks,
             'tags' => $tags,
             'category' => $category,
+            'seo' => $seo->get(),
         ]);
     }
     
@@ -71,6 +80,7 @@ class BlogController extends Controller
             'category' => $category,
             'page' => 1,
             'totalPages' => 1,
+            'seo' => Seo::noIndex(),
         ]);
     }
     
@@ -89,6 +99,7 @@ class BlogController extends Controller
             'tag' => $tag,
             'page' => 1,
             'totalPages' => 1,
+            'seo' => Seo::noIndex(),
         ]);
     }
     
@@ -101,6 +112,7 @@ class BlogController extends Controller
                 'posts' => [],
                 'query' => $query,
                 'error' => 'Search query must be at least 2 characters',
+                'seo' => Seo::noIndex(),
             ]);
         }
         
@@ -109,6 +121,7 @@ class BlogController extends Controller
         return $this->render('blog/search', [
             'posts' => $posts,
             'query' => $query,
+            'seo' => Seo::noIndex(),
         ]);
     }
 }

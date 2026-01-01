@@ -11,6 +11,18 @@ use Quidque\Constants;
 
 class MediaController extends Controller
 {
+    private const ALLOWED_UPLOAD_TYPES = [
+        'image/jpeg',
+        'image/png', 
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/webm',
+        'audio/mpeg',
+        'audio/wav',
+        'audio/ogg',
+    ];
+    
     public function index(array $params): string
     {
         $type = $this->request->get('type');
@@ -30,16 +42,13 @@ class MediaController extends Controller
     public function upload(array $params): string
     {
         if (empty($_FILES['file']['name'])) {
-            $this->redirect('/admin/media?error=No+file+uploaded');
+            $this->redirect('/admin/media?error=' . urlencode('No file uploaded'));
             return '';
         }
         
         $validation = FileValidator::validate($_FILES['file'], [
-            'max_size' => Constants::MAX_UPLOAD_SIZE,
-            'allowed_types' => array_merge(
-                Constants::ALLOWED_IMAGE_TYPES,
-                ['video/mp4', 'video/webm', 'audio/mpeg', 'audio/wav', 'audio/ogg']
-            ),
+            'max_size' => $this->config['uploads']['max_size'] ?? Constants::MAX_UPLOAD_SIZE,
+            'allowed_types' => self::ALLOWED_UPLOAD_TYPES,
         ]);
         
         if (!$validation['valid']) {
@@ -56,7 +65,7 @@ class MediaController extends Controller
         }
         
         if (!move_uploaded_file($_FILES['file']['tmp_name'], $fullPath . $filename)) {
-            $this->redirect('/admin/media?error=Failed+to+save+file');
+            $this->redirect('/admin/media?error=' . urlencode('Failed to save file'));
             return '';
         }
         
@@ -82,7 +91,7 @@ class MediaController extends Controller
         }
         
         $validation = FileValidator::validate($_FILES['file'], [
-            'max_size' => Constants::MAX_UPLOAD_SIZE,
+            'max_size' => $this->config['uploads']['max_size'] ?? Constants::MAX_UPLOAD_SIZE,
             'allowed_types' => Constants::ALLOWED_IMAGE_TYPES,
             'require_image' => true,
         ]);
@@ -132,7 +141,7 @@ class MediaController extends Controller
         $media = Media::find((int) $params['id']);
         
         if (!$media) {
-            $this->redirect('/admin/media?error=Media+not+found');
+            $this->redirect('/admin/media?error=' . urlencode('Media not found'));
             return '';
         }
         
@@ -149,12 +158,18 @@ class MediaController extends Controller
         $media = Media::find((int) $params['id']);
         
         if (!$media) {
-            $this->redirect('/admin/media?error=Media+not+found');
+            if ($this->request->isHtmx()) {
+                return $this->json(['error' => 'Media not found'], 404);
+            }
+            $this->redirect('/admin/media?error=' . urlencode('Media not found'));
             return '';
         }
         
         if (Media::isInUse($media['id'])) {
-            $this->redirect('/admin/media?error=Media+is+in+use+and+cannot+be+deleted');
+            if ($this->request->isHtmx()) {
+                return $this->json(['error' => 'Media is in use and cannot be deleted'], 400);
+            }
+            $this->redirect('/admin/media?error=' . urlencode('Media is in use and cannot be deleted'));
             return '';
         }
         

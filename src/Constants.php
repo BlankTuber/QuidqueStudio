@@ -4,7 +4,6 @@ namespace Quidque;
 
 class Constants
 {
-    // Project statuses
     public const PROJECT_ACTIVE = 'active';
     public const PROJECT_COMPLETE = 'complete';
     public const PROJECT_ON_HOLD = 'on_hold';
@@ -17,7 +16,20 @@ class Constants
         self::PROJECT_ARCHIVED,
     ];
     
-    // Blog post statuses
+    public const PROJECT_STATUS_LABELS = [
+        self::PROJECT_ACTIVE => 'Active',
+        self::PROJECT_COMPLETE => 'Complete',
+        self::PROJECT_ON_HOLD => 'On Hold',
+        self::PROJECT_ARCHIVED => 'Archived',
+    ];
+    
+    public const PROJECT_STATUS_COLORS = [
+        self::PROJECT_ACTIVE => 'cyan',
+        self::PROJECT_COMPLETE => 'green',
+        self::PROJECT_ON_HOLD => 'magenta',
+        self::PROJECT_ARCHIVED => 'gray',
+    ];
+    
     public const POST_DRAFT = 'draft';
     public const POST_PUBLISHED = 'published';
     
@@ -26,7 +38,6 @@ class Constants
         self::POST_PUBLISHED,
     ];
     
-    // Media types
     public const MEDIA_IMAGE = 'image';
     public const MEDIA_VIDEO = 'video';
     public const MEDIA_AUDIO = 'audio';
@@ -37,22 +48,18 @@ class Constants
         self::MEDIA_AUDIO,
     ];
     
-    // Comment deletion types
     public const DELETED_BY_USER = 'user';
     public const DELETED_BY_ADMIN = 'admin';
     
-    // Tech stack tiers
     public const TIER_CORE = 1;
     public const TIER_FRAMEWORK = 2;
     public const TIER_LIBRARY = 3;
     public const TIER_TOOL = 4;
     
-    // Limits
     public const MAX_PROJECT_TAGS = 2;
     public const MAX_COMMENT_LENGTH = 2000;
-    public const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
+    public const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
     
-    // Allowed upload MIME types
     public const ALLOWED_IMAGE_TYPES = [
         'image/jpeg',
         'image/png',
@@ -60,11 +67,38 @@ class Constants
         'image/webp',
     ];
     
-    // File signatures (magic bytes) for validation
+    public const ALLOWED_VIDEO_TYPES = [
+        'video/mp4',
+        'video/webm',
+    ];
+    
+    public const ALLOWED_AUDIO_TYPES = [
+        'audio/mpeg',
+        'audio/wav',
+        'audio/ogg',
+    ];
+    
+    public const ALLOWED_MEDIA_TYPES = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'video/mp4',
+        'video/webm',
+        'audio/mpeg',
+        'audio/wav',
+        'audio/ogg',
+    ];
+    
     public const FILE_SIGNATURES = [
         'image/jpeg' => ["\xFF\xD8\xFF"],
         'image/png' => ["\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"],
         'image/gif' => ["GIF87a", "GIF89a"],
         'image/webp' => ["RIFF"],
+        'video/mp4' => ["\x00\x00\x00\x18ftypmp4", "\x00\x00\x00\x1Cftypisom", "\x00\x00\x00"],
+        'video/webm' => ["\x1A\x45\xDF\xA3"],
+        'audio/mpeg' => ["\xFF\xFB", "\xFF\xFA", "\xFF\xF3", "\xFF\xF2", "ID3"],
+        'audio/wav' => ["RIFF"],
+        'audio/ogg' => ["OggS"],
     ];
 }

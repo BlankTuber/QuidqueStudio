@@ -6,6 +6,7 @@ use Quidque\Models\Project;
 use Quidque\Models\ProjectBlock;
 use Quidque\Models\GalleryItem;
 use Quidque\Models\Comment;
+use Quidque\Helpers\Seo;
 use Quidque\Constants;
 
 class ProjectController extends Controller
@@ -42,6 +43,7 @@ class ProjectController extends Controller
             'currentTag' => $tag,
             'page' => $page,
             'totalPages' => $totalPages,
+            'seo' => Seo::index(),
         ]);
     }
     
@@ -73,6 +75,16 @@ class ProjectController extends Controller
             $commentCount = Comment::countForProject($project['id']);
         }
         
+        $seo = Seo::make();
+        if ($project['status'] === Constants::PROJECT_COMPLETE) {
+            $seo->setIndex();
+        } else {
+            $seo->setNoIndex();
+        }
+        if ($project['description']) {
+            $seo->setDescription($project['description']);
+        }
+        
         return $this->render('projects/show', [
             'project' => $project,
             'techStack' => $techStack,
@@ -81,6 +93,7 @@ class ProjectController extends Controller
             'settings' => $settings,
             'comments' => $comments,
             'commentCount' => $commentCount,
+            'seo' => $seo->get(),
         ]);
     }
     
@@ -93,6 +106,7 @@ class ProjectController extends Controller
                 'projects' => [],
                 'query' => $query,
                 'error' => 'Search query must be at least 2 characters',
+                'seo' => Seo::noIndex(),
             ]);
         }
         
@@ -101,6 +115,7 @@ class ProjectController extends Controller
         return $this->render('projects/search', [
             'projects' => $projects,
             'query' => $query,
+            'seo' => Seo::noIndex(),
         ]);
     }
 }
