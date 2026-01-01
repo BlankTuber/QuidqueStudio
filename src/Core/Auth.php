@@ -63,6 +63,16 @@ class Auth
         return self::check() && (self::$user['is_confirmed'] ?? false);
     }
     
+    public static function username(): ?string
+    {
+        return self::$user['username'] ?? null;
+    }
+    
+    public static function email(): ?string
+    {
+        return self::$user['email'] ?? null;
+    }
+    
     public static function requestLogin(string $email): array
     {
         $user = User::findByEmail($email);
@@ -163,6 +173,11 @@ class Auth
         self::clearCookie();
         self::$user = null;
         self::$sessionId = null;
+    }
+    
+    public static function sessionId(): ?string
+    {
+        return self::$sessionId;
     }
     
     private static function setCookie(string $sessionId): void

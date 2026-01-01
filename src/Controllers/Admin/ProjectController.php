@@ -10,6 +10,8 @@ use Quidque\Models\ProjectBlock;
 use Quidque\Models\BlockType;
 use Quidque\Models\GalleryItem;
 use Quidque\Models\Media;
+use Quidque\Helpers\Str;
+use Quidque\Constants;
 
 class ProjectController extends Controller
 {
@@ -85,7 +87,13 @@ class ProjectController extends Controller
         $selectedTech = array_column(Project::getTechStack($project['id']), 'id');
         $blocks = ProjectBlock::getForProject($project['id']);
         $blockTypes = BlockType::all('name', 'ASC');
-        $allMedia = Media::images(); // Get all images for the picker
+        $allMedia = Media::images();
+        
+        foreach ($blocks as &$block) {
+            if ($block['block_type_slug'] === 'gallery') {
+                $block['gallery_items'] = GalleryItem::getForBlock($block['id']);
+            }
+        }
         
         return $this->renderAdmin('admin/projects/form', [
             'project' => $project,
@@ -134,7 +142,6 @@ class ProjectController extends Controller
         Project::setTags($project['id'], $data['tags'] ?? []);
         Project::setTechStack($project['id'], $data['tech'] ?? []);
         
-        // Update block data
         $blocks = $this->request->post('blocks', []);
         foreach ($blocks as $blockId => $blockData) {
             ProjectBlock::updateData((int) $blockId, $blockData);
@@ -241,7 +248,6 @@ class ProjectController extends Controller
         
         $mediaIds = $this->request->post('media_ids', []);
         
-        // Get current max sort order
         $maxOrder = $this->db->fetch(
             "SELECT MAX(sort_order) as max_order FROM gallery_items WHERE block_id = ?",
             [$block['id']]
@@ -275,7 +281,7 @@ class ProjectController extends Controller
         $title = trim($this->request->post('title', ''));
         $slug = trim($this->request->post('slug', ''));
         $description = trim($this->request->post('description', ''));
-        $status = $this->request->post('status', 'active');
+        $status = $this->request->post('status', Constants::PROJECT_ACTIVE);
         $isFeatured = $this->request->post('is_featured') === '1';
         $tags = $this->request->post('tags', []);
         $tech = $this->request->post('tech', []);
@@ -287,7 +293,7 @@ class ProjectController extends Controller
         }
         
         if (empty($slug)) {
-            $slug = $this->slugify($title);
+            $slug = Str::slug($title);
         }
         
         $existing = Project::findBySlug($slug);
@@ -295,7 +301,7 @@ class ProjectController extends Controller
             return ['error' => 'Slug already exists'];
         }
         
-        if (!in_array($status, ['active', 'complete', 'on_hold', 'archived'])) {
+        if (!in_array($status, Constants::PROJECT_STATUSES)) {
             return ['error' => 'Invalid status'];
         }
         
@@ -312,13 +318,5 @@ class ProjectController extends Controller
                 'comments_enabled' => $commentsEnabled,
             ],
         ];
-    }
-    
-    private function slugify(string $text): string
-    {
-        $text = strtolower(trim($text));
-        $text = preg_replace('/[^a-z0-9-]/', '-', $text);
-        $text = preg_replace('/-+/', '-', $text);
-        return trim($text, '-');
     }
 }

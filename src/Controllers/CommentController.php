@@ -5,9 +5,14 @@ namespace Quidque\Controllers;
 use Quidque\Core\Auth;
 use Quidque\Models\Project;
 use Quidque\Models\Comment;
+use Quidque\Helpers\RateLimiter;
+use Quidque\Constants;
 
 class CommentController extends Controller
 {
+    private const MAX_COMMENTS_PER_MINUTE = 3;
+    private const COMMENT_DECAY_SECONDS = 60;
+    
     public function store(array $params): string
     {
         $project = Project::findBySlug($params['slug']);
@@ -21,6 +26,13 @@ class CommentController extends Controller
             return $this->json(['error' => 'Comments disabled'], 403);
         }
         
+        $userId = Auth::id();
+        $rateLimitKey = 'comment:' . $userId;
+        
+        if (!RateLimiter::attempt($rateLimitKey, self::MAX_COMMENTS_PER_MINUTE, self::COMMENT_DECAY_SECONDS)) {
+            return $this->json(['error' => 'Please wait before posting another comment'], 429);
+        }
+        
         $content = trim($this->request->post('content', ''));
         $parentId = $this->request->post('parent_id');
         
@@ -28,18 +40,26 @@ class CommentController extends Controller
             return $this->json(['error' => 'Comment cannot be empty'], 400);
         }
         
-        if (strlen($content) > 2000) {
-            return $this->json(['error' => 'Comment too long (max 2000 characters)'], 400);
+        if (strlen($content) > Constants::MAX_COMMENT_LENGTH) {
+            return $this->json([
+                'error' => 'Comment too long (max ' . Constants::MAX_COMMENT_LENGTH . ' characters)'
+            ], 400);
         }
         
-        // Only admin can reply to comments
         if ($parentId && !Auth::isAdmin()) {
             return $this->json(['error' => 'Only admin can reply'], 403);
         }
         
+        if ($parentId) {
+            $parentComment = Comment::find((int) $parentId);
+            if (!$parentComment || $parentComment['project_id'] !== $project['id']) {
+                return $this->json(['error' => 'Invalid parent comment'], 400);
+            }
+        }
+        
         $commentId = Comment::createComment(
             $project['id'],
-            Auth::id(),
+            $userId,
             $content,
             $parentId ? (int) $parentId : null
         );
@@ -67,6 +87,10 @@ class CommentController extends Controller
             return $this->json(['error' => 'Unauthorized'], 403);
         }
         
+        if ($comment['deleted_by'] !== null) {
+            return $this->json(['error' => 'Cannot edit deleted comment'], 400);
+        }
+        
         if (!Comment::canEdit($comment['id'])) {
             return $this->json(['error' => 'Cannot edit comment with replies'], 400);
         }
@@ -75,6 +99,12 @@ class CommentController extends Controller
         
         if (empty($content)) {
             return $this->json(['error' => 'Comment cannot be empty'], 400);
+        }
+        
+        if (strlen($content) > Constants::MAX_COMMENT_LENGTH) {
+            return $this->json([
+                'error' => 'Comment too long (max ' . Constants::MAX_COMMENT_LENGTH . ' characters)'
+            ], 400);
         }
         
         Comment::editComment($comment['id'], $content);
@@ -97,8 +127,12 @@ class CommentController extends Controller
             return $this->json(['error' => 'Unauthorized'], 403);
         }
         
-        $deletedBy = $isAdmin && !$isOwner ? 'admin' : 'user';
+        $deletedBy = $isAdmin && !$isOwner ? Constants::DELETED_BY_ADMIN : Constants::DELETED_BY_USER;
         Comment::softDelete($comment['id'], $deletedBy);
+        
+        if ($this->request->isHtmx()) {
+            return '';
+        }
         
         return $this->json(['success' => true]);
     }

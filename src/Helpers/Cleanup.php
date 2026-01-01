@@ -13,9 +13,17 @@ class Cleanup
         $results = [
             'tokens' => AuthToken::cleanup(),
             'sessions' => Session::cleanup(),
-            'messages' => Message::cleanup(30),
+            'messages' => 0, // No longer auto-deleting messages
+            'rate_limits' => RateLimiter::cleanup(86400),
         ];
         
+        return $results;
+    }
+    
+    public static function runWithMessages(int $messageDaysOld = 90): array
+    {
+        $results = self::run();
+        $results['messages'] = Message::cleanup($messageDaysOld);
         return $results;
     }
     
@@ -23,12 +31,15 @@ class Cleanup
     {
         $logFile = BASE_PATH . '/storage/logs/cleanup.log';
         
+        $parts = [];
+        foreach ($results as $key => $count) {
+            $parts[] = "{$count} {$key}";
+        }
+        
         $entry = sprintf(
-            "[%s] Cleaned: %d tokens, %d sessions, %d messages\n",
+            "[%s] Cleaned: %s\n",
             date('Y-m-d H:i:s'),
-            $results['tokens'],
-            $results['sessions'],
-            $results['messages']
+            implode(', ', $parts)
         );
         
         file_put_contents($logFile, $entry, FILE_APPEND);

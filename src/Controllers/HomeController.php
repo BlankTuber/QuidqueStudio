@@ -2,17 +2,15 @@
 
 namespace Quidque\Controllers;
 
+use Quidque\Models\Project;
+use Quidque\Models\BlogPost;
+
 class HomeController extends Controller
 {
     public function index(array $params): string
     {
-        $featuredProjects = $this->db->fetchAll(
-            "SELECT * FROM projects WHERE is_featured = 1 AND status = 'active' ORDER BY updated_at DESC LIMIT 3"
-        );
-        
-        $recentPosts = $this->db->fetchAll(
-            "SELECT * FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC LIMIT 4"
-        );
+        $featuredProjects = Project::getFeatured(3);
+        $recentPosts = BlogPost::getRecent(4);
         
         return $this->render('home', [
             'projects' => $featuredProjects,

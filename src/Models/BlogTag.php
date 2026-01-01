@@ -2,6 +2,8 @@
 
 namespace Quidque\Models;
 
+use Quidque\Helpers\Str;
+
 class BlogTag extends Model
 {
     protected static string $table = 'blog_tags';
@@ -18,7 +20,7 @@ class BlogTag extends Model
     
     public static function findOrCreate(string $name): int
     {
-        $slug = self::slugify($name);
+        $slug = Str::slug($name);
         $existing = self::findBySlug($slug);
         
         if ($existing) {
@@ -31,11 +33,15 @@ class BlogTag extends Model
         ]);
     }
     
-    private static function slugify(string $text): string
+    public static function getPostCount(int $tagId): int
     {
-        $text = strtolower(trim($text));
-        $text = preg_replace('/[^a-z0-9-]/', '-', $text);
-        $text = preg_replace('/-+/', '-', $text);
-        return trim($text, '-');
+        $result = self::$db->fetch(
+            "SELECT COUNT(*) as count 
+             FROM blog_post_tags bpt
+             JOIN blog_posts bp ON bpt.post_id = bp.id
+             WHERE bpt.tag_id = ? AND bp.status = 'published'",
+            [$tagId]
+        );
+        return (int) $result['count'];
     }
 }

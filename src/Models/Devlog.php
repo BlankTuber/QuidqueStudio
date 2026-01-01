@@ -2,6 +2,8 @@
 
 namespace Quidque\Models;
 
+use Quidque\Helpers\Str;
+
 class Devlog extends Model
 {
     protected static string $table = 'devlogs';
@@ -57,10 +59,11 @@ class Devlog extends Model
     
     private static function generateSlug(int $projectId, string $title): string
     {
-        $base = strtolower(trim($title));
-        $base = preg_replace('/[^a-z0-9-]/', '-', $base);
-        $base = preg_replace('/-+/', '-', $base);
-        $base = trim($base, '-');
+        $base = Str::slug($title);
+        
+        if (empty($base)) {
+            $base = 'entry';
+        }
         
         $slug = $base;
         $counter = 1;

@@ -2,13 +2,15 @@
 
 namespace Quidque\Models;
 
+use Quidque\Helpers\Str;
+
 class AuthToken extends Model
 {
     protected static string $table = 'auth_tokens';
     
     public static function generate(int $userId, int $expirySeconds): string
     {
-        $token = bin2hex(random_bytes(32));
+        $token = Str::random(64);
         
         self::$db->query(
             "INSERT INTO " . static::$table . " (user_id, token, expires_at, used) 
@@ -49,5 +51,15 @@ class AuthToken extends Model
         return self::$db->query(
             "DELETE FROM " . static::$table . " WHERE expires_at < NOW() OR used = 1"
         )->rowCount();
+    }
+    
+    public static function invalidateForUser(int $userId): int
+    {
+        return self::$db->update(
+            static::$table,
+            ['used' => 1],
+            'user_id = ? AND used = 0',
+            [$userId]
+        );
     }
 }

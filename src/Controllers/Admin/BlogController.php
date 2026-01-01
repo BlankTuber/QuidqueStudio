@@ -11,6 +11,8 @@ use Quidque\Models\BlogCategory;
 use Quidque\Models\BlogTag;
 use Quidque\Models\Media;
 use Quidque\Models\Project;
+use Quidque\Helpers\Str;
+use Quidque\Constants;
 
 class BlogController extends Controller
 {
@@ -18,9 +20,9 @@ class BlogController extends Controller
     {
         $status = $this->request->get('status');
         
-        if ($status === 'published') {
+        if ($status === Constants::POST_PUBLISHED) {
             $posts = BlogPost::getPublished(100);
-        } elseif ($status === 'draft') {
+        } elseif ($status === Constants::POST_DRAFT) {
             $posts = BlogPost::getDrafts();
         } else {
             $published = BlogPost::getPublished(100);
@@ -70,7 +72,7 @@ class BlogController extends Controller
             'slug' => $data['slug'],
             'author_id' => Auth::id(),
             'category_id' => $data['category_id'],
-            'status' => 'draft',
+            'status' => Constants::POST_DRAFT,
         ]);
         
         if (!empty($data['tags'])) {
@@ -140,7 +142,6 @@ class BlogController extends Controller
         
         BlogPost::setTags($post['id'], $data['tags'] ?? []);
         
-        // Update block data
         $blocks = $this->request->post('blocks', []);
         foreach ($blocks as $blockId => $blockData) {
             BlogBlock::updateData((int) $blockId, $blockData);
@@ -294,7 +295,7 @@ class BlogController extends Controller
         }
         
         if (empty($slug)) {
-            $slug = $this->slugify($title);
+            $slug = Str::slug($title);
         }
         
         $existing = BlogPost::findBySlug($slug);
@@ -308,13 +309,5 @@ class BlogController extends Controller
             'category_id' => $categoryId ? (int) $categoryId : null,
             'tags' => array_map('intval', $tags),
         ];
-    }
-    
-    private function slugify(string $text): string
-    {
-        $text = strtolower(trim($text));
-        $text = preg_replace('/[^a-z0-9-]/', '-', $text);
-        $text = preg_replace('/-+/', '-', $text);
-        return trim($text, '-');
     }
 }

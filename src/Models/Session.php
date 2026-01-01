@@ -2,14 +2,17 @@
 
 namespace Quidque\Models;
 
+use Quidque\Helpers\Str;
+
 class Session extends Model
 {
     protected static string $table = 'sessions';
     protected static string $primaryKey = 'id';
+    protected static string $primaryKeyType = 'string';
     
     public static function generate(int $userId, int $lifetimeSeconds, array $deviceInfo = []): string
     {
-        $id = bin2hex(random_bytes(32));
+        $id = Str::random(64);
         
         self::$db->insert(static::$table, [
             'id' => $id,
@@ -65,6 +68,11 @@ class Session extends Model
              ORDER BY last_active_at DESC",
             [$userId]
         );
+    }
+    
+    public static function countForUser(int $userId): int
+    {
+        return self::count('user_id = ? AND expires_at > NOW()', [$userId]);
     }
     
     public static function cleanup(): int

@@ -6,18 +6,20 @@ use Quidque\Models\BlogPost;
 use Quidque\Models\BlogBlock;
 use Quidque\Models\BlogCategory;
 use Quidque\Models\BlogTag;
+use Quidque\Models\Media;
+use Quidque\Constants;
 
 class BlogController extends Controller
 {
     public function index(array $params): string
     {
-        $page = (int) $this->request->get('page', 1);
+        $page = max(1, (int) $this->request->get('page', 1));
         $limit = 10;
         $offset = ($page - 1) * $limit;
         
         $posts = BlogPost::getPublished($limit, $offset);
         $total = BlogPost::countPublished();
-        $totalPages = ceil($total / $limit);
+        $totalPages = (int) ceil($total / $limit);
         
         return $this->render('blog/index', [
             'posts' => $posts,
@@ -30,17 +32,27 @@ class BlogController extends Controller
     {
         $post = BlogPost::findBySlug($params['slug']);
         
-        if (!$post || $post['status'] !== 'published') {
+        if (!$post || $post['status'] !== Constants::POST_PUBLISHED) {
             return $this->notFound();
         }
         
         $blocks = BlogBlock::getForPost($post['id']);
         $tags = BlogPost::getTags($post['id']);
+        $category = $post['category_id'] ? BlogCategory::find($post['category_id']) : null;
+        
+        foreach ($blocks as &$block) {
+            $block['data'] = json_decode($block['data'], true) ?? [];
+            
+            if ($block['block_type_slug'] === 'image' && !empty($block['data']['media_id'])) {
+                $block['media'] = Media::find((int) $block['data']['media_id']);
+            }
+        }
         
         return $this->render('blog/show', [
             'post' => $post,
             'blocks' => $blocks,
             'tags' => $tags,
+            'category' => $category,
         ]);
     }
     
@@ -77,6 +89,26 @@ class BlogController extends Controller
             'tag' => $tag,
             'page' => 1,
             'totalPages' => 1,
+        ]);
+    }
+    
+    public function search(array $params): string
+    {
+        $query = trim($this->request->get('q', ''));
+        
+        if (empty($query) || strlen($query) < 2) {
+            return $this->render('blog/search', [
+                'posts' => [],
+                'query' => $query,
+                'error' => 'Search query must be at least 2 characters',
+            ]);
+        }
+        
+        $posts = BlogPost::search($query, 20);
+        
+        return $this->render('blog/search', [
+            'posts' => $posts,
+            'query' => $query,
         ]);
     }
 }

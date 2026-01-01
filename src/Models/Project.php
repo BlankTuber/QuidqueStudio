@@ -2,6 +2,8 @@
 
 namespace Quidque\Models;
 
+use Quidque\Constants;
+
 class Project extends Model
 {
     protected static string $table = 'projects';
@@ -15,20 +17,23 @@ class Project extends Model
     {
         return self::$db->fetchAll(
             "SELECT * FROM " . static::$table . " 
-             WHERE is_featured = 1 AND status = 'active' 
+             WHERE is_featured = 1 AND status = ? 
              ORDER BY updated_at DESC LIMIT ?",
-            [$limit]
+            [Constants::PROJECT_ACTIVE, $limit]
         );
     }
     
     public static function getByStatus(string $status): array
     {
+        if (!in_array($status, Constants::PROJECT_STATUSES)) {
+            return [];
+        }
         return self::where('status', $status, 'updated_at DESC');
     }
     
     public static function getActive(): array
     {
-        return self::getByStatus('active');
+        return self::getByStatus(Constants::PROJECT_ACTIVE);
     }
     
     public static function getAllWithTags(?string $status = null, ?string $tagSlug = null): array
@@ -41,12 +46,15 @@ class Project extends Model
         $where = [];
         $params = [];
         
-        if ($status) {
+        if ($status !== null) {
+            if (!in_array($status, Constants::PROJECT_STATUSES)) {
+                return [];
+            }
             $where[] = "p.status = ?";
             $params[] = $status;
         }
         
-        if ($tagSlug) {
+        if ($tagSlug !== null) {
             $sql .= " INNER JOIN project_tags pt2 ON p.id = pt2.project_id
                       INNER JOIN tags t2 ON pt2.tag_id = t2.id AND t2.slug = ?";
             $params[] = $tagSlug;
@@ -61,12 +69,26 @@ class Project extends Model
         return self::$db->fetchAll($sql, $params);
     }
     
+    public static function getPaginated(int $page, int $perPage = 12, ?string $status = null): array
+    {
+        $where = '1=1';
+        $params = [];
+        
+        if ($status !== null && in_array($status, Constants::PROJECT_STATUSES)) {
+            $where = 'status = ?';
+            $params[] = $status;
+        }
+        
+        return self::paginate($page, $perPage, 'updated_at', 'DESC', $where, $params);
+    }
+    
     public static function getTags(int $projectId): array
     {
         return self::$db->fetchAll(
             "SELECT t.* FROM tags t
              JOIN project_tags pt ON t.id = pt.tag_id
-             WHERE pt.project_id = ?",
+             WHERE pt.project_id = ?
+             ORDER BY t.name",
             [$projectId]
         );
     }
@@ -75,7 +97,8 @@ class Project extends Model
     {
         self::$db->delete('project_tags', 'project_id = ?', [$projectId]);
         
-        $tagIds = array_slice($tagIds, 0, 2); // Max 2 tags
+        $tagIds = array_slice(array_unique(array_map('intval', $tagIds)), 0, Constants::MAX_PROJECT_TAGS);
+        
         foreach ($tagIds as $tagId) {
             self::$db->insert('project_tags', [
                 'project_id' => $projectId,
@@ -99,7 +122,7 @@ class Project extends Model
     {
         self::$db->delete('project_tech_stack', 'project_id = ?', [$projectId]);
         
-        foreach ($techIds as $techId) {
+        foreach (array_unique(array_map('intval', $techIds)) as $techId) {
             self::$db->insert('project_tech_stack', [
                 'project_id' => $projectId,
                 'tech_id' => $techId,
@@ -113,11 +136,33 @@ class Project extends Model
         if (!$project || !$project['settings']) {
             return ['devlog_enabled' => false, 'comments_enabled' => false];
         }
-        return json_decode($project['settings'], true);
+        $settings = json_decode($project['settings'], true);
+        return $settings ?? ['devlog_enabled' => false, 'comments_enabled' => false];
     }
     
     public static function updateSettings(int $projectId, array $settings): int
     {
         return self::update($projectId, ['settings' => json_encode($settings)]);
+    }
+    
+    public static function search(string $query, int $limit = 20): array
+    {
+        $searchTerm = '%' . $query . '%';
+        return self::$db->fetchAll(
+            "SELECT p.*, GROUP_CONCAT(DISTINCT t.name) as tag_names
+             FROM " . static::$table . " p
+             LEFT JOIN project_tags pt ON p.id = pt.project_id
+             LEFT JOIN tags t ON pt.tag_id = t.id
+             WHERE p.title LIKE ? OR p.description LIKE ? OR p.slug LIKE ?
+             GROUP BY p.id
+             ORDER BY p.updated_at DESC
+             LIMIT ?",
+            [$searchTerm, $searchTerm, $searchTerm, $limit]
+        );
+    }
+    
+    public static function isValidStatus(string $status): bool
+    {
+        return in_array($status, Constants::PROJECT_STATUSES);
     }
 }

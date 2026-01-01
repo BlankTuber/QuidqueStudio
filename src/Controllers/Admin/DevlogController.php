@@ -18,7 +18,7 @@ class DevlogController extends Controller
         
         $entries = Devlog::getForProject($project['id'], 100);
         
-        return $this->render('admin/devlog/index', [
+        return $this->renderAdmin('admin/devlog/index', [
             'project' => $project,
             'entries' => $entries,
         ]);
@@ -32,7 +32,7 @@ class DevlogController extends Controller
             return $this->notFound();
         }
         
-        return $this->render('admin/devlog/form', [
+        return $this->renderAdmin('admin/devlog/form', [
             'project' => $project,
             'entry' => null,
         ]);
@@ -50,7 +50,7 @@ class DevlogController extends Controller
         $content = trim($this->request->post('content', ''));
         
         if (empty($title)) {
-            return $this->render('admin/devlog/form', [
+            return $this->renderAdmin('admin/devlog/form', [
                 'project' => $project,
                 'entry' => null,
                 'error' => 'Title is required',
@@ -76,7 +76,7 @@ class DevlogController extends Controller
             return $this->notFound();
         }
         
-        return $this->render('admin/devlog/form', [
+        return $this->renderAdmin('admin/devlog/form', [
             'project' => $project,
             'entry' => $entry,
         ]);
@@ -100,7 +100,7 @@ class DevlogController extends Controller
         $content = trim($this->request->post('content', ''));
         
         if (empty($title)) {
-            return $this->render('admin/devlog/form', [
+            return $this->renderAdmin('admin/devlog/form', [
                 'project' => $project,
                 'entry' => $entry,
                 'error' => 'Title is required',

@@ -7,6 +7,8 @@ use Quidque\Models\Tag;
 use Quidque\Models\TechStack;
 use Quidque\Models\BlogTag;
 use Quidque\Models\BlogCategory;
+use Quidque\Helpers\Str;
+use Quidque\Constants;
 
 class TagController extends Controller
 {
@@ -25,7 +27,6 @@ class TagController extends Controller
         ]);
     }
     
-    // Project Tags
     public function storeTag(array $params): string
     {
         $name = trim($this->request->post('name', ''));
@@ -35,7 +36,7 @@ class TagController extends Controller
             return '';
         }
         
-        $slug = $this->slugify($name);
+        $slug = Str::slug($name);
         
         if (Tag::findBySlug($slug)) {
             $this->redirect('/admin/tags?error=Tag+already+exists');
@@ -59,30 +60,33 @@ class TagController extends Controller
         
         Tag::delete($tag['id']);
         
+        if ($this->request->isHtmx()) {
+            return '';
+        }
+        
         $this->redirect('/admin/tags?deleted=1');
         return '';
     }
     
-    // Tech Stack
     public function storeTech(array $params): string
     {
         $name = trim($this->request->post('name', ''));
-        $tier = (int) $this->request->post('tier', 1);
+        $tier = (int) $this->request->post('tier', Constants::TIER_CORE);
         
         if (empty($name)) {
             $this->redirect('/admin/tags?error=Name+is+required');
             return '';
         }
         
-        $slug = $this->slugify($name);
+        $slug = Str::slug($name);
         
         if (TechStack::findBySlug($slug)) {
             $this->redirect('/admin/tags?error=Tech+already+exists');
             return '';
         }
         
-        if ($tier < 1 || $tier > 4) {
-            $tier = 1;
+        if ($tier < Constants::TIER_CORE || $tier > Constants::TIER_TOOL) {
+            $tier = Constants::TIER_CORE;
         }
         
         TechStack::create(['name' => $name, 'slug' => $slug, 'tier' => $tier]);
@@ -102,11 +106,14 @@ class TagController extends Controller
         
         TechStack::delete($tech['id']);
         
+        if ($this->request->isHtmx()) {
+            return '';
+        }
+        
         $this->redirect('/admin/tags?deleted=1');
         return '';
     }
     
-    // Blog Tags
     public function storeBlogTag(array $params): string
     {
         $name = trim($this->request->post('name', ''));
@@ -133,11 +140,14 @@ class TagController extends Controller
         
         BlogTag::delete($tag['id']);
         
+        if ($this->request->isHtmx()) {
+            return '';
+        }
+        
         $this->redirect('/admin/tags?deleted=1');
         return '';
     }
     
-    // Blog Categories
     public function storeCategory(array $params): string
     {
         $name = trim($this->request->post('name', ''));
@@ -147,7 +157,7 @@ class TagController extends Controller
             return '';
         }
         
-        $slug = $this->slugify($name);
+        $slug = Str::slug($name);
         
         if (BlogCategory::findBySlug($slug)) {
             $this->redirect('/admin/tags?error=Category+already+exists');
@@ -171,15 +181,11 @@ class TagController extends Controller
         
         BlogCategory::delete($category['id']);
         
+        if ($this->request->isHtmx()) {
+            return '';
+        }
+        
         $this->redirect('/admin/tags?deleted=1');
         return '';
-    }
-    
-    private function slugify(string $text): string
-    {
-        $text = strtolower(trim($text));
-        $text = preg_replace('/[^a-z0-9-]/', '-', $text);
-        $text = preg_replace('/-+/', '-', $text);
-        return trim($text, '-');
     }
 }
